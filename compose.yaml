@@ -7,7 +7,7 @@ services:
       - "5180:5180"
     environment:
       # Host names the app answers to; anything else gets a 400 (DNS-rebinding protection).
-      AllowedHosts: "resume.phyllistine.com;phyllistine-server.local;localhost"
+      AllowedHosts: "resume.phyllistine.com;phyllistine-server.local;192.168.86.20;localhost"
     volumes:
       # Database, generated PDFs, photo uploads and the preview cache.
       - resume-data:/data
