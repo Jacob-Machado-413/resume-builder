@@ -16,3 +16,7 @@ backend/data/
 
 .direnv/
 result
+
+# Server deploy scripts (machine-specific)
+scripts/deploy.sh
+scripts/deploy-migrate.sh
