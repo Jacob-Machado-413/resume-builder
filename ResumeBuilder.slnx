@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/backend/">
+    <Project Path="backend/ResumeBuilder.Api.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ResumeBuilder.Tests.csproj" />
+  </Folder>
+</Solution>

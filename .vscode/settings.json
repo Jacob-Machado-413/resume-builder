@@ -1,0 +1,12 @@
+{
+  "dotnet.defaultSolution": "ResumeBuilder.slnx",
+  "files.exclude": {
+    "**/.direnv": true
+  },
+  "files.watcherExclude": {
+    "**/.direnv/**": true
+  },
+  "search.exclude": {
+    "**/.direnv": true
+  }
+}
