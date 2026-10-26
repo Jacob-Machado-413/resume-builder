@@ -24,7 +24,8 @@ public class AppPaths
     public string UploadsDir => Path.Combine(DataDir, "uploads");
 }
 
-public record RenderOutcome(bool Success, string? Error, List<string> PagePngs, string? Pdf, string? Typst, string? Markdown);
+/// <param name="Transient">The failure says nothing about the YAML (timeout, rendercv missing), so it must not be cached.</param>
+public record RenderOutcome(bool Success, string? Error, List<string> PagePngs, string? Pdf, string? Typst, string? Markdown, bool Transient = false);
 
 public record PagePreview(int Number, string Url, double Fill);
 
@@ -38,10 +39,6 @@ public partial class RenderCvService(IConfiguration config, AppPaths paths, ILog
     /// <summary>Runs rendercv on <paramref name="yaml"/> inside <paramref name="workDir"/>.</summary>
     public async Task<RenderOutcome> RenderAsync(string yaml, string? photoPath, string workDir, bool full, CancellationToken ct = default)
     {
-        Directory.CreateDirectory(workDir);
-        await File.WriteAllTextAsync(Path.Combine(workDir, "cv.yaml"), yaml, ct);
-        if (photoPath is not null) File.Copy(photoPath, Path.Combine(workDir, "photo" + Path.GetExtension(photoPath)), true);
-
         var psi = new ProcessStartInfo(Executable)
         {
             WorkingDirectory = workDir,
@@ -73,9 +70,14 @@ public partial class RenderCvService(IConfiguration config, AppPaths paths, ILog
         psi.Environment["TERM"] = "dumb";
         psi.Environment["COLUMNS"] = "120";
 
+        // Wait for a slot before touching the disk, so a request cancelled in the queue leaves nothing behind.
         await Gate.WaitAsync(ct);
         try
         {
+            Directory.CreateDirectory(workDir);
+            await File.WriteAllTextAsync(Path.Combine(workDir, "cv.yaml"), yaml, ct);
+            if (photoPath is not null) File.Copy(photoPath, Path.Combine(workDir, "photo" + Path.GetExtension(photoPath)), true);
+
             using var proc = Process.Start(psi) ?? throw new InvalidOperationException("Could not start rendercv.");
             var stdout = proc.StandardOutput.ReadToEndAsync(ct);
             var stderr = proc.StandardError.ReadToEndAsync(ct);
@@ -88,7 +90,9 @@ public partial class RenderCvService(IConfiguration config, AppPaths paths, ILog
             catch (OperationCanceledException)
             {
                 proc.Kill(true);
-                return Fail("rendercv timed out after 90 seconds.");
+                // The caller went away (e.g. a newer preview superseded this one); that is not a timeout.
+                ct.ThrowIfCancellationRequested();
+                return Fail("rendercv timed out after 90 seconds.", transient: true);
             }
 
             var output = Clean((await stdout) + "\n" + (await stderr));
@@ -113,7 +117,7 @@ public partial class RenderCvService(IConfiguration config, AppPaths paths, ILog
         }
         catch (System.ComponentModel.Win32Exception)
         {
-            return Fail($"Could not run \"{Executable}\". Install rendercv or set ResumeBuilder:RenderCvPath in appsettings.json.");
+            return Fail($"Could not run \"{Executable}\". Install rendercv or set ResumeBuilder:RenderCvPath in appsettings.json.", transient: true);
         }
         finally
         {
@@ -150,17 +154,28 @@ public partial class RenderCvService(IConfiguration config, AppPaths paths, ILog
         {
             CleanupOldPreviews();
             var tmp = dir + ".tmp-" + Guid.NewGuid().ToString("N")[..6];
-            var outcome = await RenderAsync(build.Yaml, build.PhotoPath, tmp, full: false, ct);
-            if (!outcome.Success) await File.WriteAllTextAsync(Path.Combine(tmp, "error.txt"), outcome.Error, ct);
             try
             {
-                if (Directory.Exists(dir)) Directory.Delete(dir, true);
-                Directory.Move(tmp, dir);
+                var outcome = await RenderAsync(build.Yaml, build.PhotoPath, tmp, full: false, ct);
+                if (!outcome.Success)
+                {
+                    if (outcome.Transient) return new PreviewResult(key, 0, [], build.Warnings, outcome.Error, build.Yaml);
+                    await File.WriteAllTextAsync(Path.Combine(tmp, "error.txt"), outcome.Error, ct);
+                }
+
+                try
+                {
+                    if (Directory.Exists(dir)) Directory.Delete(dir, true);
+                    Directory.Move(tmp, dir);
+                }
+                catch (IOException)
+                {
+                    // Another request rendered the same content concurrently; keep theirs.
+                }
             }
-            catch (IOException)
+            finally
             {
-                // Another request rendered the same content concurrently; keep theirs.
-                Directory.Delete(tmp, true);
+                DeleteQuietly(tmp);
             }
         }
 
@@ -209,7 +224,20 @@ public partial class RenderCvService(IConfiguration config, AppPaths paths, ILog
         }
     }
 
-    private static RenderOutcome Fail(string error) => new(false, error, [], null, null, null);
+    /// <summary>Removes a scratch directory if it still exists; a failure here must not mask the real result.</summary>
+    public void DeleteQuietly(string dir)
+    {
+        try
+        {
+            if (Directory.Exists(dir)) Directory.Delete(dir, true);
+        }
+        catch (Exception ex)
+        {
+            log.LogDebug(ex, "Could not delete {Dir}", dir);
+        }
+    }
+
+    private static RenderOutcome Fail(string error, bool transient = false) => new(false, error, [], null, null, null, transient);
 
     private static string Clean(string s) => AnsiRegex().Replace(s, "").Trim();
 

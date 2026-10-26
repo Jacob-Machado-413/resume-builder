@@ -92,7 +92,7 @@ public static class SystemEndpoints
                 var resume = new Resume
                 {
                     Name = string.IsNullOrWhiteSpace(input.ResumeName) ? "Imported resume" : input.ResumeName.Trim(),
-                    Design = profile.DefaultDesign,
+                    Design = AppDbContext.DeepCopy(profile.DefaultDesign),
                     TargetPages = profile.DefaultTargetPages,
                     Sections = parsed.Sections.Where(s => s.Fragments.Count > 0).Select(s => new ResumeSection
                     {

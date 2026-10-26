@@ -20,6 +20,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
     };
 
+    /// <summary>Deep-copies a JSON-column value, so two entities never share (and silently co-mutate) one object.</summary>
+    internal static T DeepCopy<T>(T value) => JsonSerializer.Deserialize<T>(JsonSerializer.Serialize(value, Json), Json)!;
+
     protected override void OnModelCreating(ModelBuilder b)
     {
         b.Entity<Profile>(e =>

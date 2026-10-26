@@ -26,6 +26,18 @@ nix-shell          # optional, provides dotnet + node + rendercv
 The first start creates the database. Then go to **Profile → Import** and paste an existing
 rendercv YAML file, or start adding fragments in **Fragments**.
 
+### Docker
+
+The image bundles the UI, the API and rendercv (pinned with the `RENDERCV_VERSION` build arg),
+with Typst's package cache pre-warmed so rendering works offline.
+
+```sh
+docker compose up -d --build   # http://<host>:5180, data in the "resume-data" volume
+```
+
+Set `AllowedHosts` in [compose.yaml](compose.yaml) to the host names you browse to; requests for
+any other name are rejected. The app has no login, so only expose it on a network you trust.
+
 ## Features
 
 **Fragment library**

@@ -1,0 +1,11 @@
+**/bin/
+**/obj/
+**/node_modules/
+frontend/dist/
+backend/wwwroot/
+backend/data/
+tests/
+.direnv/
+.vscode/
+.git/
+result

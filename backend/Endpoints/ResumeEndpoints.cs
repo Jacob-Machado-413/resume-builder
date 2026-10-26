@@ -98,7 +98,7 @@ public static class ResumeEndpoints
             var r = new Resume
             {
                 JobId = job?.Id,
-                Design = profile.DefaultDesign,
+                Design = AppDbContext.DeepCopy(profile.DefaultDesign),
                 TargetPages = profile.DefaultTargetPages,
                 Name = !string.IsNullOrWhiteSpace(input.Name) ? input.Name.Trim()
                     : job is not null ? $"{job.Company} – {job.Title}".Trim(' ', '–') : "Untitled resume",
@@ -173,30 +173,34 @@ public static class ResumeEndpoints
             if (await db.Resumes.Include(r => r.Job).FirstOrDefaultAsync(r => r.Id == id, ct) is not { } r) return Results.NotFound();
             var build = await BuildAsync(db, paths, r, false, r.Job);
             var tmp = Path.Combine(paths.VersionsDir, ".tmp-" + Guid.NewGuid().ToString("N"));
-            var outcome = await render.RenderAsync(build.Yaml, build.PhotoPath, tmp, full: true, ct);
-            if (!outcome.Success || outcome.Pdf is null)
+            try
             {
-                if (Directory.Exists(tmp)) Directory.Delete(tmp, true);
-                return Results.BadRequest(new { error = outcome.Error ?? "rendercv did not produce a PDF.", warnings = build.Warnings });
+                var outcome = await render.RenderAsync(build.Yaml, build.PhotoPath, tmp, full: true, ct);
+                if (!outcome.Success || outcome.Pdf is null)
+                    return Results.BadRequest(new { error = outcome.Error ?? "rendercv did not produce a PDF.", warnings = build.Warnings });
+
+                var number = (await db.Versions.Where(v => v.ResumeId == id).MaxAsync(v => (int?)v.Number, ct) ?? 0) + 1;
+                var version = new ResumeVersion
+                {
+                    ResumeId = id, JobId = r.JobId, Number = number, ResumeName = r.Name,
+                    Label = string.IsNullOrWhiteSpace(input.Label) ? null : input.Label.Trim(), Notes = input.Notes,
+                    Yaml = build.Yaml, PageCount = outcome.PagePngs.Count, Theme = r.Design.Theme,
+                    Snapshot = JsonSerializer.Serialize(new ResumeSnapshot(r.HeadlineOverride, r.Sections, r.Design, r.TargetPages), AppDbContext.Json),
+                };
+                db.Versions.Add(version);
+                await db.SaveChangesAsync(ct);
+
+                version.Folder = version.Id.ToString();
+                var final = Path.Combine(paths.VersionsDir, version.Folder);
+                if (Directory.Exists(final)) Directory.Delete(final, true);
+                Directory.Move(tmp, final);
+                await db.SaveChangesAsync(ct);
+                return Results.Ok(new { version = await VersionEndpoints.ToDtoAsync(db, version), warnings = build.Warnings });
             }
-
-            var number = (await db.Versions.Where(v => v.ResumeId == id).MaxAsync(v => (int?)v.Number, ct) ?? 0) + 1;
-            var version = new ResumeVersion
+            finally
             {
-                ResumeId = id, JobId = r.JobId, Number = number, ResumeName = r.Name,
-                Label = string.IsNullOrWhiteSpace(input.Label) ? null : input.Label.Trim(), Notes = input.Notes,
-                Yaml = build.Yaml, PageCount = outcome.PagePngs.Count, Theme = r.Design.Theme,
-                Snapshot = JsonSerializer.Serialize(new ResumeSnapshot(r.HeadlineOverride, r.Sections, r.Design, r.TargetPages), AppDbContext.Json),
-            };
-            db.Versions.Add(version);
-            await db.SaveChangesAsync(ct);
-
-            version.Folder = version.Id.ToString();
-            var final = Path.Combine(paths.VersionsDir, version.Folder);
-            if (Directory.Exists(final)) Directory.Delete(final, true);
-            Directory.Move(tmp, final);
-            await db.SaveChangesAsync(ct);
-            return Results.Ok(new { version = await VersionEndpoints.ToDtoAsync(db, version), warnings = build.Warnings });
+                render.DeleteQuietly(tmp);
+            }
         });
 
         // Live preview of an unsaved draft. Includes keyword coverage when the draft targets a job.
