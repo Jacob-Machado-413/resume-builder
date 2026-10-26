@@ -1,5 +1,8 @@
 # Resume Builder
 
+THIS PROJECT IS 90% VIBE CODED
+
+
 A local web app for tailoring resumes to job applications. You keep a library of reusable
 **fragments** (jobs, projects, degrees, skills lines, summaries), pick the ones that fit a
 posting until the page is full, and generate PDFs with [rendercv](https://rendercv.com).
