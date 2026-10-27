@@ -176,6 +176,8 @@ public class DesignSettings
     public string? Alignment { get; set; }
     public bool? ShowFooter { get; set; }
     public bool? ShowTopNote { get; set; }
+    /// <summary>Icons next to email, phone, LinkedIn etc. in the header. Null keeps the theme default.</summary>
+    public bool? ShowConnectionIcons { get; set; }
     public bool ShowPhoto { get; set; }
     public string Locale { get; set; } = "english";
     public List<string> BoldKeywords { get; set; } = [];

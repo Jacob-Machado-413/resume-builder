@@ -88,6 +88,18 @@ public class CvYamlBuilderTests
         Assert.Contains("show_footer: false", yaml);
     }
 
+    [Fact]
+    public void Connection_icons_toggle_sets_header_show_icons()
+    {
+        var (profile, resume, fragments) = Everything();
+        Assert.DoesNotContain("show_icons", CvYamlBuilder.Build(profile, resume, fragments, new BuildOptions()).Yaml);
+
+        resume.Design.Theme = "harvard";
+        resume.Design.ShowConnectionIcons = true;
+        var yaml = CvYamlBuilder.Build(profile, resume, fragments, new BuildOptions()).Yaml;
+        Assert.Contains("header:\n    connections:\n      show_icons: true", yaml);
+    }
+
     [Theory]
     [InlineData("0.7in", 0.7)]
     [InlineData("2.54cm", 1.0)]

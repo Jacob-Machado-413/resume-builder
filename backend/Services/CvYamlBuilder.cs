@@ -207,6 +207,14 @@ public static partial class CvYamlBuilder
         if (d.ShowTopNote is not null) page["show_top_note"] = d.ShowTopNote;
         design["page"] = page;
 
+        if (d.ShowConnectionIcons is not null)
+        {
+            design["header"] = new Dictionary<string, object?>
+            {
+                ["connections"] = new Dictionary<string, object?> { ["show_icons"] = d.ShowConnectionIcons },
+            };
+        }
+
         if (TryParseHex(d.PrimaryColor) is { } rgb)
         {
             design["colors"] = new[] { "name", "headline", "connections", "section_titles", "links" }

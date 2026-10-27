@@ -62,6 +62,7 @@ export interface DesignSettings {
   alignment?: string | null
   showFooter?: boolean | null
   showTopNote?: boolean | null
+  showConnectionIcons?: boolean | null
   showPhoto: boolean
   locale: string
   boldKeywords: string[]

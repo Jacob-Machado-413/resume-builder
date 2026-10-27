@@ -89,6 +89,11 @@ export function DesignPanel({ meta, value, onChange, keywordSuggestions, hasPhot
             <option value="">Theme default</option><option value="on">Show</option><option value="off">Hide</option>
           </select>
         </Field>
+        <Field label="Contact icons (email, LinkedIn…)" className="half">
+          <select value={tri(value.showConnectionIcons)} onChange={(e) => set('showConnectionIcons', fromTri(e.target.value))}>
+            <option value="">Theme default</option><option value="on">Show</option><option value="off">Hide</option>
+          </select>
+        </Field>
       </div>
 
       <label className="check">
