@@ -2,15 +2,12 @@
 
 THIS PROJECT IS 90% VIBE CODED
 
-
-A local web app for tailoring resumes to job applications. You keep a library of reusable
-**fragments** (jobs, projects, degrees, skills lines, summaries), pick the ones that fit a
-posting until the page is full, and generate PDFs with [rendercv](https://rendercv.com).
-Every generated PDF is kept as an immutable **version**, paired with the job you sent it to.
+a frontend for rendercv resume generation, so I can track which version of my resume's perform well, which ones i used on which jobs, etc.
 
 - **Backend:** ASP.NET Core 10 minimal API, EF Core + SQLite, YamlDotNet
 - **Frontend:** React 19 + TypeScript (Vite), TanStack Query, dnd-kit
 - **Rendering:** the `rendercv` CLI (Typst under the hood)
+
 
 ## Running it
 
@@ -26,17 +23,6 @@ nix-shell          # optional, provides dotnet + node + rendercv
 The first start creates the database. Then go to **Profile → Import** and paste an existing
 rendercv YAML file, or start adding fragments in **Fragments**.
 
-### Docker
-
-The image bundles the UI, the API and rendercv (pinned with the `RENDERCV_VERSION` build arg),
-with Typst's package cache pre-warmed so rendering works offline.
-
-```sh
-docker compose up -d --build   # http://<host>:5180, data in the "resume-data" volume
-```
-
-Set `AllowedHosts` in [compose.yaml](compose.yaml) to the host names you browse to; requests for
-any other name are rejected. The app has no login, so only expose it on a network you trust.
 
 ## Features
 
@@ -88,26 +74,6 @@ any other name are rejected. The app has no login, so only expose it on a networ
 - Export and import the fragment library and jobs as JSON.
 - Light and dark themes.
 
-## Data and configuration
-
-Everything lives in `backend/data/` by default:
-
-```
-resume-builder.db        SQLite database
-versions/<id>/           resume.pdf, page_N.png, resume.md, resume.typ, cv.yaml
-uploads/                 profile photo
-cache/previews/          live-preview renders (safe to delete)
-```
-
-Settings live in `backend/appsettings.json` and can also be set as environment variables:
-
-| Setting | Default | Meaning |
-| --- | --- | --- |
-| `Urls` | `http://localhost:5180` | Listen address |
-| `ResumeBuilder:DataDirectory` | `backend/data` | Where the database and PDFs go |
-| `ResumeBuilder:RenderCvPath` | `rendercv` | rendercv executable |
-
-To restore a backup, stop the app and unzip the archive into the data directory.
 
 ## How it works
 
@@ -122,15 +88,6 @@ how full it is. Generating a version renders the PDF, PNGs, Markdown and Typst i
 `data/versions/<id>/` and freezes the YAML and layout, so later library edits never change
 what you sent.
 
-## Tests
-
-```sh
-dotnet test
-```
-
-The tests cover YAML generation, highlight selection and overrides, the PNG decoder,
-keyword extraction and ranking, and the importer. When `rendercv` is installed, one test
-also renders every entry type in every built-in theme through the real CLI.
 
 ## Project layout
 
