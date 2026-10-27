@@ -2,7 +2,8 @@
 
 THIS PROJECT IS 90% VIBE CODED
 
-a frontend for rendercv resume generation, so I can track which version of my resume's perform well, which ones i used on which jobs, etc.
+A frontend for rendercv resume generation, so I can track performance of different versions of my resume, which 'fragments' do poorly, etc.
+if I'm going to be applying to a billion jobs I might as well get fun data out of it.
 
 - **Backend:** ASP.NET Core 10 minimal API, EF Core + SQLite, YamlDotNet
 - **Frontend:** React 19 + TypeScript (Vite), TanStack Query, dnd-kit
